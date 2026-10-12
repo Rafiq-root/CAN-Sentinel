@@ -2,5 +2,6 @@
   {"event_id": "e1", "timestamp": "2026-10-11T18:00:01.120Z", "can_id": "0x1A4", "rule": "HIGH_FREQUENCY", "reason": "CAN ID 0x1A4 observed 142 msgs/s (threshold 50/s)", "details": {"frequency": 142, "threshold": 50}},
   {"event_id": "e2", "timestamp": "2026-10-11T18:00:03.400Z", "can_id": "0x7FF", "rule": "UNKNOWN_ID", "reason": "CAN ID 0x7FF not in allowlist", "details": {}},
   {"event_id": "e3", "timestamp": "2026-10-11T18:00:05.980Z", "can_id": "0x0B4", "rule": "MALFORMED_FRAME", "reason": "DLC 9 exceeds 8-byte limit", "details": {"dlc": 9}},
-  {"event_id": "e4", "timestamp": "2026-10-11T18:00:07.000Z", "can_id": "0x000", "rule": "UNKNOWN_ID", "reason": "CAN ID 0x000 not in allowlist (brake control)", "details": {}}
+  {"event_id": "e4", "timestamp": "2026-10-11T18:00:07.000Z", "can_id": "0x000", "rule": "UNKNOWN_ID", "reason": "CAN ID 0x000 not in allowlist (brake control)", "details": {}},
+  {"event_id": "e5", "timestamp": "2026-10-11T18:00:09.300Z", "can_id": "0x7FF", "rule": "UNKNOWN_ID", "reason": "CAN ID 0x7FF not in allowlist", "details": {}}
 ]

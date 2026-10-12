@@ -1,0 +1,63 @@
+[
+  {
+    "alert_id": "ALR-20261012-7A6C1C",
+    "timestamp": "2026-10-11T18:00:07.000Z",
+    "can_id": "0x000",
+    "severity": "HIGH",
+    "category": "unknown_id",
+    "reason": "CAN ID 0x000 not in allowlist (brake control)",
+    "status": "NEW",
+    "occurrences": 1,
+    "first_seen": "2026-10-11T18:00:07.000Z",
+    "last_seen": "2026-10-11T18:00:07.000Z",
+    "source_rule": "UNKNOWN_ID",
+    "raw_details": {}
+  },
+  {
+    "alert_id": "ALR-20261012-4E0A47",
+    "timestamp": "2026-10-11T18:00:05.980Z",
+    "can_id": "0x0B4",
+    "severity": "LOW",
+    "category": "malformed_frame",
+    "reason": "DLC 9 exceeds 8-byte limit",
+    "status": "NEW",
+    "occurrences": 1,
+    "first_seen": "2026-10-11T18:00:05.980Z",
+    "last_seen": "2026-10-11T18:00:05.980Z",
+    "source_rule": "MALFORMED_FRAME",
+    "raw_details": {
+      "dlc": 9
+    }
+  },
+  {
+    "alert_id": "ALR-20261012-D2B614",
+    "timestamp": "2026-10-11T18:00:03.400Z",
+    "can_id": "0x7FF",
+    "severity": "MEDIUM",
+    "category": "unknown_id",
+    "reason": "CAN ID 0x7FF not in allowlist",
+    "status": "NEW",
+    "occurrences": 2,
+    "first_seen": "2026-10-11T18:00:03.400Z",
+    "last_seen": "2026-10-11T18:00:09.300Z",
+    "source_rule": "UNKNOWN_ID",
+    "raw_details": {}
+  },
+  {
+    "alert_id": "ALR-20261012-79EEE7",
+    "timestamp": "2026-10-11T18:00:01.120Z",
+    "can_id": "0x1A4",
+    "severity": "HIGH",
+    "category": "high_frequency",
+    "reason": "CAN ID 0x1A4 observed 142 msgs/s (threshold 50/s)",
+    "status": "NEW",
+    "occurrences": 1,
+    "first_seen": "2026-10-11T18:00:01.120Z",
+    "last_seen": "2026-10-11T18:00:01.120Z",
+    "source_rule": "HIGH_FREQUENCY",
+    "raw_details": {
+      "frequency": 142,
+      "threshold": 50
+    }
+  }
+]
