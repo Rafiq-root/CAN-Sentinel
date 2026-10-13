@@ -1,0 +1,8 @@
+{
+  "name": "ID Spoofing - Unknown ID on Airbag ECU",
+  "description": "Attacker ECU injects traffic on 0x0D2 (airbag - safety-critical) which is not in the allowlist. Base rule UNKNOWN_ID = MEDIUM, but the safety-critical escalation raises it to HIGH. Contrast event on non-critical 0x123 stays MEDIUM.",
+  "events": [
+    {"event_id": "s1", "timestamp": "2026-10-13T09:10:00.000Z", "can_id": "0x0D2", "rule": "UNKNOWN_ID", "reason": "CAN ID 0x0D2 not in allowlist (airbag status)", "details": {"source_ecu": "unknown"}},
+    {"event_id": "s2", "timestamp": "2026-10-13T09:10:30.000Z", "can_id": "0x123", "rule": "UNKNOWN_ID", "reason": "CAN ID 0x123 not in allowlist", "details": {"source_ecu": "unknown"}}
+  ]
+}

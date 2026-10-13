@@ -1,0 +1,10 @@
+{
+  "name": "Replay Attack - Bursts After Quiet Gaps",
+  "description": "Captured traffic replayed in bursts: two events close together (fold), a gap beyond the 10s dedupe window, then two more. Expected: 2 separate alerts, each with occurrences=2 (burst folding + window boundary separation).",
+  "events": [
+    {"event_id": "r1", "timestamp": "2026-10-13T10:00:00.000Z", "can_id": "0x7FF", "rule": "UNKNOWN_ID", "reason": "CAN ID 0x7FF not in allowlist", "details": {"replayed": true}},
+    {"event_id": "r2", "timestamp": "2026-10-13T10:00:04.000Z", "can_id": "0x7FF", "rule": "UNKNOWN_ID", "reason": "CAN ID 0x7FF not in allowlist", "details": {"replayed": true}},
+    {"event_id": "r3", "timestamp": "2026-10-13T10:00:30.000Z", "can_id": "0x7FF", "rule": "UNKNOWN_ID", "reason": "CAN ID 0x7FF not in allowlist", "details": {"replayed": true}},
+    {"event_id": "r4", "timestamp": "2026-10-13T10:00:34.000Z", "can_id": "0x7FF", "rule": "UNKNOWN_ID", "reason": "CAN ID 0x7FF not in allowlist", "details": {"replayed": true}}
+  ]
+}
