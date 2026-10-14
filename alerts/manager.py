@@ -11,12 +11,17 @@ DUPLICATE HANDLING (documented rule):
   Duplicates fold into the existing alert: occurrences += 1, last_seen
   updated. No new alert is raised (prevents alert flooding during an attack).
 
+INPUT HARDENING (documented):
+  Every event is validated at the pipeline boundary (alerts/validation.py).
+  Invalid events are REJECTED and logged (never raised) so one malformed
+  event cannot crash the alerting service while an attack is in progress.
+
 Integration (for Members 1 & 4):
     from alerts.manager import AlertManager
     mgr = AlertManager()
-    alert = mgr.process_event(event_dict)      # Alert (new or folded)
+    alert = mgr.process_event(event_dict)      # Alert (new/folded) or None if invalid
     mgr.get_alerts(severity="HIGH", limit=20)  # newest-first query for UI
-    mgr.stats()                                # severity/status counts
+    mgr.stats()                                # severity/status counts + rejected count
 """
 
 from __future__ import annotations
@@ -25,6 +30,7 @@ from datetime import datetime
 
 from .schema import Alert, new_alert_id, utc_now_iso
 from .severity_rules import canonical_can_id, classify
+from .validation import validate_event
 
 
 class AlertManager:
@@ -32,13 +38,25 @@ class AlertManager:
 
     def __init__(self, dedupe_window_seconds: int = 10):
         self.dedupe_window_seconds = dedupe_window_seconds
-        self.alerts: list[Alert] = []                    # full history, oldest first
-        self._active: dict[tuple[str, str], Alert] = {}  # (can_id, RULE) -> newest alert
+        self.alerts: list[Alert] = []                     # full history, oldest first
+        self._active: dict[tuple[str, str], Alert] = {}   # (can_id, RULE) -> newest alert
+        self.rejected_events: list[dict] = []             # boundary rejection log (in-memory)
 
     # ---------- core ----------
 
-    def process_event(self, event: dict) -> Alert:
-        """Process one detection event; return the new or updated Alert."""
+    def process_event(self, event: dict) -> Alert | None:
+        """Process one detection event.
+
+        Returns the new or updated Alert, or None when the event failed
+        boundary validation (rejection is recorded in self.rejected_events).
+        """
+        ok, error = validate_event(event)
+        if not ok:
+            self.rejected_events.append(
+                {"rejected_at": utc_now_iso(), "reason": error, "event": str(event)[:200]}
+            )
+            return None
+
         can_id = canonical_can_id(event.get("can_id", ""))
         rule = str(event.get("rule", "")).upper()
         severity, category = classify(event)
@@ -86,13 +104,14 @@ class AlertManager:
         return out
 
     def stats(self) -> dict:
-        """Aggregate counts for the dashboard."""
+        """Aggregate counts for the dashboard (includes rejected events)."""
         by_severity = {"LOW": 0, "MEDIUM": 0, "HIGH": 0}
         by_status: dict[str, int] = {}
         for a in self.alerts:
             by_severity[a.severity.value] += 1
             by_status[a.status.value] = by_status.get(a.status.value, 0) + 1
-        return {"total": len(self.alerts), "by_severity": by_severity, "by_status": by_status}
+        return {"total": len(self.alerts), "by_severity": by_severity,
+                "by_status": by_status, "rejected": len(self.rejected_events)}
 
     # ---------- internals ----------
 
@@ -102,5 +121,5 @@ class AlertManager:
             t1 = datetime.fromisoformat(earlier.replace("Z", "+00:00"))
             t2 = datetime.fromisoformat(later.replace("Z", "+00:00"))
         except (ValueError, AttributeError):
-            return True  # unparseable time -> prefer folding over spamming
+            return True  # defense in depth: prefer folding over spamming
         return (t2 - t1).total_seconds() <= self.dedupe_window_seconds
