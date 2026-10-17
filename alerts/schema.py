@@ -31,13 +31,24 @@ class Status(str, Enum):
     FALSE_POSITIVE = "FALSE_POSITIVE"
 
 
+# Valid lifecycle transitions (documented rule): FORWARD-ONLY.
+# Rationale: terminal states cannot be reopened, so an analyst can never
+# silently 'unresolve' an alert - every change leaves an audit trail entry.
+VALID_TRANSITIONS: dict[Status, set[Status]] = {
+    Status.NEW: {Status.ACKNOWLEDGED, Status.RESOLVED, Status.FALSE_POSITIVE},
+    Status.ACKNOWLEDGED: {Status.RESOLVED, Status.FALSE_POSITIVE},
+    Status.RESOLVED: set(),          # terminal
+    Status.FALSE_POSITIVE: set(),    # terminal
+}
+
+
 def utc_now_iso() -> str:
-    """Current UTC time as ISO-8601 string, e.g. 2026-10-11T14:30:00.123Z"""
+    """Current UTC time as ISO-8601 string, e.g. 2026-10-17T14:30:00.123Z"""
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def new_alert_id() -> str:
-    """Readable, unique alert ID, e.g. ALR-20261011-A3F9C2"""
+    """Readable, unique alert ID, e.g. ALR-20261017-A3F9C2"""
     return f"ALR-{datetime.now(timezone.utc):%Y%m%d}-{uuid.uuid4().hex[:6].upper()}"
 
 
@@ -56,6 +67,7 @@ class Alert:
     last_seen: str = ""
     source_rule: str = ""        # detection rule that fired (e.g. "HIGH_FREQUENCY")
     raw_details: dict = field(default_factory=dict)
+    status_history: list = field(default_factory=list)  # audit trail of transitions (JSON only)
 
     def to_dict(self) -> dict:
         d = asdict(self)

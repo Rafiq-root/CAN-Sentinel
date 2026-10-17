@@ -16,10 +16,17 @@ INPUT HARDENING (documented):
   Invalid events are REJECTED and logged (never raised) so one malformed
   event cannot crash the alerting service while an attack is in progress.
 
+STATUS LIFECYCLE (documented):
+  NEW -> ACKNOWLEDGED -> RESOLVED, or NEW/ACKNOWLEDGED -> FALSE_POSITIVE.
+  Forward-only (see schema.VALID_TRANSITIONS); every transition is recorded
+  in the alert's status_history with a timestamp and optional analyst note.
+
 Integration (for Members 1 & 4):
     from alerts.manager import AlertManager
     mgr = AlertManager()
     alert = mgr.process_event(event_dict)      # Alert (new/folded) or None if invalid
+    mgr.acknowledge(alert_id, note="...")      # lifecycle transitions
+    mgr.resolve(alert_id) / mgr.mark_false_positive(alert_id)
     mgr.get_alerts(severity="HIGH", limit=20)  # newest-first query for UI
     mgr.stats()                                # severity/status counts + rejected count
 """
@@ -28,7 +35,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from .schema import Alert, new_alert_id, utc_now_iso
+from .schema import Alert, Status, VALID_TRANSITIONS, new_alert_id, utc_now_iso
 from .severity_rules import canonical_can_id, classify
 from .validation import validate_event
 
@@ -40,7 +47,9 @@ class AlertManager:
         self.dedupe_window_seconds = dedupe_window_seconds
         self.alerts: list[Alert] = []                     # full history, oldest first
         self._active: dict[tuple[str, str], Alert] = {}   # (can_id, RULE) -> newest alert
+        self._by_id: dict[str, Alert] = {}                # alert_id -> Alert
         self.rejected_events: list[dict] = []             # boundary rejection log (in-memory)
+        self.last_error: str = ""                         # reason of the last failed call
 
     # ---------- core ----------
 
@@ -83,7 +92,48 @@ class AlertManager:
         )
         self.alerts.append(alert)
         self._active[key] = alert
+        self._by_id[alert.alert_id] = alert
         return alert
+
+    # ---------- status lifecycle ----------
+
+    def set_status(self, alert_id: str, new_status: str, note: str = "") -> Alert | None:
+        """Transition an alert's status following the documented lifecycle.
+
+        Returns the updated Alert, or None with the reason in self.last_error
+        when the alert is unknown, the status name is invalid, or the
+        transition is not allowed (e.g. RESOLVED -> NEW).
+        """
+        self.last_error = ""
+        alert = self._by_id.get(alert_id)
+        if alert is None:
+            self.last_error = f"unknown alert_id '{alert_id}'"
+            return None
+        try:
+            target = Status(str(new_status).strip().upper())
+        except ValueError:
+            self.last_error = f"invalid status '{new_status}'"
+            return None
+        if target not in VALID_TRANSITIONS[alert.status]:
+            self.last_error = f"invalid transition {alert.status.value} -> {target.value}"
+            return None
+        alert.status = target
+        alert.status_history.append(
+            {"status": target.value, "at": utc_now_iso(), "note": note}
+        )
+        return alert
+
+    def acknowledge(self, alert_id: str, note: str = "") -> Alert | None:
+        """NEW/... -> ACKNOWLEDGED (analyst has seen the alert)."""
+        return self.set_status(alert_id, Status.ACKNOWLEDGED.value, note)
+
+    def resolve(self, alert_id: str, note: str = "") -> Alert | None:
+        """... -> RESOLVED (incident handled; terminal state)."""
+        return self.set_status(alert_id, Status.RESOLVED.value, note)
+
+    def mark_false_positive(self, alert_id: str, note: str = "") -> Alert | None:
+        """... -> FALSE_POSITIVE (feeds detection-rule tuning; terminal state)."""
+        return self.set_status(alert_id, Status.FALSE_POSITIVE.value, note)
 
     # ---------- query API (dashboard / Member 4) ----------
 
