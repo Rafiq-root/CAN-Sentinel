@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Analysis - CAN Bus IDS</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin: 20px 0;
+        }
+        
+        .chart-container-small {
+            position: relative;
+            height: 280px;
+            margin: 20px 0;
+        }
+        
+        .tab-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid var(--border-subtle);
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+            margin-bottom: -2px;
+        }
+        
+        .tab.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+        }
+        
+        .tab:hover:not(.active) {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .anomaly-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .anomaly-table thead {
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--border-default);
+        }
+        
+        .anomaly-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+        
+        .anomaly-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+        }
+        
+        .anomaly-table tbody tr {
+            transition: background 0.15s;
+        }
+        
+        .anomaly-table tbody tr:hover {
+            background: var(--bg-hover);
+        }
+        
+        .score-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .score-extreme { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+        .score-high { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
+        .score-medium { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid #3b82f6; }
+        .score-low { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
+        
+        .info-card {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-left: 4px solid var(--accent-primary);
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .info-card h3 {
+            color: var(--accent-primary);
+            font-size: 16px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .info-card p {
+            line-height: 1.8;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        
+        .info-card strong {
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="logo-icon">CI</div>
+                    <div class="logo-text">
+                        <h1>CAN Sentinel</h1>
+                        <p>Intrusion Detection</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a href="index.html" class="nav-item">
+                        <span class="nav-icon">◆</span>
+                        <span>Security Dashboard</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Monitoring</div>
+                    <a href="bus-monitor.html" class="nav-item">
+                        <span class="nav-icon">▣</span>
+                        <span>Network Traffic</span>
+                    </a>
+                    <a href="ids-detection.html" class="nav-item">
+                        <span class="nav-icon">▲</span>
+                        <span>Threat Detection</span>
+                    </a>
+                    <a href="ml-analysis.html" class="nav-item active">
+                        <span class="nav-icon">◉</span>
+                        <span>ML Analysis</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <a href="#" class="nav-item" onclick="return false;" style="opacity: 0.5;">
+                        <span class="nav-icon">⚙</span>
+                        <span>Configuration</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="return false;" style="opacity: 0.5;">
+                        <span class="nav-icon">◈</span>
+                        <span>Reports</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="breadcrumb">
+                    <span class="breadcrumb-item">Home</span>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current">ML Analysis</span>
+                </div>
+                
+                <div class="header-actions">
+                    <div class="system-status">
+                        <span class="status-indicator healthy"></span>
+                        <span class="status-text">Model Active</span>
+                    </div>
+                    <div class="live-clock" id="live-clock">--:--:--</div>
+                    <button class="btn-refresh" onclick="loadMLData()">
+                        <span>↻</span>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Content Area -->
+            <div class="content-area">
+                <h1 class="page-title">Machine Learning Analysis</h1>
+                <p class="page-subtitle">Isolation Forest anomaly detection performance and insights</p>
+                
+                <!-- KPI Grid -->
+                <div class="dashboard-grid grid-4 mb-32">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Detection Rate</div>
+                        <div class="kpi-value" id="kpi-accuracy">--%</div>
+                        <div class="kpi-change positive">Isolation Forest</div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-label">Frames Analyzed</div>
+                        <div class="kpi-value" id="kpi-frames">---</div>
+                        <div class="kpi-change positive">Total Messages</div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-label">ML Detections</div>
+                        <div class="kpi-value" id="kpi-ml-detections">---</div>
+                        <div class="kpi-change positive">Anomaly Alerts</div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-label">Avg Anomaly Score</div>
+                        <div class="kpi-value" id="kpi-avg-score">--</div>
+                        <div class="kpi-change">Lower = Suspicious</div>
+                    </div>
+                </div>
+                
+                <!-- Tabs -->
+                <div class="tab-container">
+                    <button class="tab active" onclick="switchTab('overview')">ML Overview</button>
+                    <button class="tab" onclick="switchTab('ecu')">ECU Analysis</button>
+                </div>
+                
+                <!-- Tab Content: ML Overview -->
+                <div id="tab-overview" class="tab-content active">
+                    <!-- Info Card -->
+                    <div class="info-card">
+                        <h3>Machine Learning Detection</h3>
+                        <p>
+                            This dashboard visualizes the performance of our <strong>Isolation Forest</strong> machine learning model for CAN bus anomaly detection. 
+                            The model was trained on normal traffic patterns and identifies deviations that may indicate cyberattacks.
+                            <br><br>
+                            <strong>Why It Matters:</strong> Traditional rule-based detection misses sophisticated attacks that mimic legitimate traffic. 
+                            ML-based detection catches zero-day attacks, injection attempts, and subtle timing anomalies that bypass signature-based systems. 
+                            The visualizations below demonstrate how effectively our hybrid detection system identifies threats in real-time.
+                        </p>
+                    </div>
+                    
+                    <div class="dashboard-grid grid-2 mb-24">
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Detector Comparison</h2>
+                                    <p class="card-subtitle">Distribution of detections by method</p>
+                                </div>
+                            </div>
+                            <div class="chart-container-small">
+                                <canvas id="detectorChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Detection Timeline</h2>
+                                    <p class="card-subtitle">ML vs Rule-based alerts per cycle</p>
+                                </div>
+                            </div>
+                            <div class="chart-container-small">
+                                <canvas id="timelineChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-24">
+                        <div class="card-header">
+                            <div>
+                                <h2 class="card-title">Anomaly Score Distribution</h2>
+                                <p class="card-subtitle">Frequency distribution of ML anomaly scores (lower = more suspicious)</p>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="scoreChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h2 class="card-title">Top 10 Most Anomalous Detections</h2>
+                                <p class="card-subtitle">Highest-confidence ML anomaly detections</p>
+                            </div>
+                        </div>
+                        <table class="anomaly-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>CAN ID</th>
+                                    <th>Cycle</th>
+                                    <th>Anomaly Score</th>
+                                    <th>Severity</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody id="anomaly-table-body">
+                                <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Tab Content: ECU Analysis -->
+                <div id="tab-ecu" class="tab-content">
+                    <!-- Info Card -->
+                    <div class="info-card">
+                        <h3>ECU-Level Attack Analysis</h3>
+                        <p>
+                            This view breaks down anomaly detection by <strong>Electronic Control Unit (ECU)</strong> and CAN identifier. 
+                            Each ECU (Engine, Brake, Body Control) sends messages with a unique CAN ID, and attacks often target specific subsystems.
+                            <br><br>
+                            <strong>Why It Matters:</strong> Identifying which ECUs are under attack helps security teams prioritize response. 
+                            For example, a DoS attack on the Brake ECU (ID 0x120) is more critical than one targeting the Infotainment system. 
+                            The visualizations below show attack clustering patterns and which ECUs are most frequently targeted, 
+                            enabling targeted mitigation and forensic analysis.
+                        </p>
+                    </div>
+                    
+                    <div class="card mb-24">
+                        <div class="card-header">
+                            <div>
+                                <h2 class="card-title">Anomalies by ECU / CAN ID</h2>
+                                <p class="card-subtitle">Bubble size represents number of anomalies detected</p>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="ecuHeatmapChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-grid grid-2">
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">ECU Anomaly Distribution</h2>
+                                    <p class="card-subtitle">Percentage of alerts by CAN ID</p>
+                                </div>
+                            </div>
+                            <div class="chart-container-small">
+                                <canvas id="ecuPieChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Average Score by CAN ID</h2>
+                                    <p class="card-subtitle">Mean anomaly score per identifier</p>
+                                </div>
+                            </div>
+                            <div class="chart-container-small">
+                                <canvas id="canIdBarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/common.js"></script>
+    <script src="js/ml-analysis.js"></script>
+    <script>
+        // Live clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('live-clock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+</html>

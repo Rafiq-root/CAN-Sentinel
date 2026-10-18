@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat Detection - CAN Bus IDS</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        .alert-item {
+            padding: 16px;
+            margin: 10px 0;
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent-danger);
+            border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .alert-item:hover {
+            background: var(--bg-hover);
+            transform: translateX(4px);
+        }
+        
+        .alert-item.severity-warning {
+            border-left-color: var(--accent-warning);
+        }
+        
+        .alert-item.severity-critical {
+            border-left-color: var(--accent-danger);
+            background: rgba(239, 68, 68, 0.05);
+        }
+        
+        .alert-item.severity-info {
+            border-left-color: var(--accent-info);
+        }
+        
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .alert-badges {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .alert-timeline {
+            max-height: 700px;
+            overflow-y: auto;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-warning), var(--accent-success));
+            transition: width 0.3s;
+            border-radius: 3px;
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .filter-select {
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 150px;
+        }
+        
+        .filter-select:hover {
+            border-color: var(--accent-primary);
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .btn-reset {
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .btn-reset:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--border-default);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="logo-icon">CI</div>
+                    <div class="logo-text">
+                        <h1>CAN Sentinel</h1>
+                        <p>Intrusion Detection</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a href="index.html" class="nav-item">
+                        <span class="nav-icon">◆</span>
+                        <span>Security Dashboard</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Monitoring</div>
+                    <a href="bus-monitor.html" class="nav-item">
+                        <span class="nav-icon">▣</span>
+                        <span>Network Traffic</span>
+                    </a>
+                    <a href="ids-detection.html" class="nav-item active">
+                        <span class="nav-icon">▲</span>
+                        <span>Threat Detection</span>
+                    </a>
+                    <a href="ml-analysis.html" class="nav-item">
+                        <span class="nav-icon">◉</span>
+                        <span>ML Analysis</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <a href="#" class="nav-item" onclick="return false;" style="opacity: 0.5;">
+                        <span class="nav-icon">⚙</span>
+                        <span>Configuration</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="return false;" style="opacity: 0.5;">
+                        <span class="nav-icon">◈</span>
+                        <span>Reports</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="breadcrumb">
+                    <span class="breadcrumb-item">Home</span>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current">Threat Detection</span>
+                </div>
+                
+                <div class="header-actions">
+                    <div class="system-status">
+                        <span class="status-indicator warning"></span>
+                        <span class="status-text">Threats Active</span>
+                    </div>
+                    <div class="live-clock" id="live-clock">--:--:--</div>
+                    <button class="btn-refresh" onclick="loadSecurityData()">
+                        <span>↻</span>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Content Area -->
+            <div class="content-area">
+                <h1 class="page-title">Threat Detection System</h1>
+                <p class="page-subtitle">Intrusion detection alerts and attack analysis</p>
+                
+                <!-- Stats Grid -->
+                <div class="dashboard-grid grid-4 mb-32">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Frames Analyzed</div>
+                        <div class="kpi-value" id="stat-frames-analyzed">---</div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-label">Threats Detected</div>
+                        <div class="kpi-value" id="stat-threats-detected">---</div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-label">Detection Rate</div>
+                        <div class="kpi-value" id="stat-detection-rate">--%</div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-label">Total Alerts</div>
+                        <div class="kpi-value" id="stat-total-alerts">---</div>
+                    </div>
+                </div>
+                
+                <!-- Attack Summary -->
+                <div class="card mb-24">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Attack Summary</h2>
+                            <p class="card-subtitle">Malicious activity breakdown by attack type</p>
+                        </div>
+                    </div>
+                    <div class="dashboard-grid grid-3">
+                        <div class="kpi-card">
+                            <div class="kpi-label">Fuzzing Attacks</div>
+                            <div class="kpi-value" id="attack-fuzzing">---</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">DoS Attacks</div>
+                            <div class="kpi-value" id="attack-dos">---</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Injection Attacks</div>
+                            <div class="kpi-value" id="attack-injection">---</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Security Alerts -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Security Alerts</h2>
+                            <p class="card-subtitle">Real-time threat detections and incident timeline</p>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label class="filter-label">Severity:</label>
+                            <select id="severity-filter" onchange="filterAlerts()" class="filter-select">
+                                <option value="all">All Severities</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label">Detector:</label>
+                            <select id="detector-filter" onchange="filterAlerts()" class="filter-select">
+                                <option value="all">All Detectors</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label">Attack Type:</label>
+                            <select id="attack-filter" onchange="filterAlerts()" class="filter-select">
+                                <option value="all">All Attack Types</option>
+                            </select>
+                        </div>
+                        
+                        <button onclick="resetFilters()" class="btn-reset">Reset Filters</button>
+                    </div>
+                    
+                    <div class="alert-timeline" id="alert-timeline">
+                        <div class="alert-item">Loading alerts...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/common.js"></script>
+    <script src="js/ids-detection.js"></script>
+    <script>
+        // Live clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('live-clock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+</html>

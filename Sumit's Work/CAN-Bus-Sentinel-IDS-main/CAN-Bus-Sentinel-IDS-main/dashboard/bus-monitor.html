@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Traffic - CAN Bus IDS</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        .message-item {
+            padding: 12px 16px;
+            margin: 8px 0;
+            background: var(--bg-secondary);
+            border-left: 3px solid var(--accent-primary);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .message-item:hover {
+            background: var(--bg-hover);
+            transform: translateX(4px);
+        }
+        
+        .message-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .ecu-engine { border-left-color: #ef4444; }
+        .ecu-brake { border-left-color: #f59e0b; }
+        .ecu-body { border-left-color: #06b6d4; }
+        
+        .filter-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .filter-select {
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .filter-select:hover {
+            border-color: var(--accent-primary);
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .btn-reset {
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-reset:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--border-default);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="logo-icon">CI</div>
+                    <div class="logo-text">
+                        <h1>CAN Sentinel</h1>
+                        <p>Intrusion Detection</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a href="index.html" class="nav-item">
+                        <span class="nav-icon">◆</span>
+                        <span>Security Dashboard</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Monitoring</div>
+                    <a href="bus-monitor.html" class="nav-item active">
+                        <span class="nav-icon">▣</span>
+                        <span>Network Traffic</span>
+                    </a>
+                    <a href="ids-detection.html" class="nav-item">
+                        <span class="nav-icon">▲</span>
+                        <span>Threat Detection</span>
+                    </a>
+                    <a href="ml-analysis.html" class="nav-item">
+                        <span class="nav-icon">◉</span>
+                        <span>ML Analysis</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <a href="#" class="nav-item" onclick="return false;" style="opacity: 0.5;">
+                        <span class="nav-icon">⚙</span>
+                        <span>Configuration</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="return false;" style="opacity: 0.5;">
+                        <span class="nav-icon">◈</span>
+                        <span>Reports</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="breadcrumb">
+                    <span class="breadcrumb-item">Home</span>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current">Network Traffic</span>
+                </div>
+                
+                <div class="header-actions">
+                    <div class="system-status">
+                        <span class="status-indicator healthy"></span>
+                        <span class="status-text">Bus Active</span>
+                    </div>
+                    <div class="live-clock" id="live-clock">--:--:--</div>
+                    <button class="btn-refresh" onclick="loadData()">
+                        <span>↻</span>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Content Area -->
+            <div class="content-area">
+                <h1 class="page-title">Network Traffic Monitor</h1>
+                <p class="page-subtitle">Real-time CAN bus communication and ECU status monitoring</p>
+                
+                <!-- Stats Grid -->
+                <div class="dashboard-grid grid-4 mb-32">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Total Frames</div>
+                        <div class="kpi-value" id="stat-total-frames">---</div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-label">Collisions</div>
+                        <div class="kpi-value" id="stat-collisions">---</div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-label">Bus Errors</div>
+                        <div class="kpi-value" id="stat-errors">---</div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-label">Dropped Frames</div>
+                        <div class="kpi-value" id="stat-dropped">---</div>
+                    </div>
+                </div>
+                
+                <!-- ECU Status -->
+                <div class="card mb-24">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">ECU Status</h2>
+                            <p class="card-subtitle">Electronic Control Unit health and statistics</p>
+                        </div>
+                    </div>
+                    <div id="ecu-status">Loading...</div>
+                </div>
+                
+                <!-- Message Log -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">CAN Message Log</h2>
+                            <p class="card-subtitle">Latest 50 messages from the CAN bus</p>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label class="filter-label">Filter by ECU:</label>
+                            <select id="ecu-filter" onchange="filterMessages()" class="filter-select">
+                                <option value="all">All ECUs</option>
+                            </select>
+                        </div>
+                        
+                        <button onclick="resetMessageFilters()" class="btn-reset">Reset Filter</button>
+                    </div>
+                    
+                    <div class="message-list" id="message-log">
+                        <div class="message-item">Loading messages...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/common.js"></script>
+    <script src="js/bus-monitor.js"></script>
+    <script>
+        // Live clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('live-clock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+</html>
