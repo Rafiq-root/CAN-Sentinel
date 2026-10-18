@@ -92,3 +92,16 @@ Roadmap
 Week 2: status lifecycle methods + persisted transitions, auto-persistence, extra dashboard queries
 Week 3: live integration with real simulator + detection engine
 Week 4: performance pass, edge cases, final docs
+
+## Persistent Mode (auto-persistence)
+
+    from alerts.manager import AlertManager
+
+    mgr = AlertManager(history_path="alert_history.json")
+
+History loads at startup and every change (new alert, folded duplicate,
+status transition) is written back immediately - the dashboard can restart
+mid-demo without losing alerts. Without history_path the manager stays
+purely in-memory (backward compatible). File format: JSON list of alert
+dicts, oldest first. A corrupt history file never crashes the manager:
+it starts fresh and records the problem in mgr.persistence_errors.

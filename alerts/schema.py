@@ -43,12 +43,12 @@ VALID_TRANSITIONS: dict[Status, set[Status]] = {
 
 
 def utc_now_iso() -> str:
-    """Current UTC time as ISO-8601 string, e.g. 2026-10-17T14:30:00.123Z"""
+    """Current UTC time as ISO-8601 string, e.g. 2026-10-18T14:30:00.123Z"""
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def new_alert_id() -> str:
-    """Readable, unique alert ID, e.g. ALR-20261017-A3F9C2"""
+    """Readable, unique alert ID, e.g. ALR-20261018-A3F9C2"""
     return f"ALR-{datetime.now(timezone.utc):%Y%m%d}-{uuid.uuid4().hex[:6].upper()}"
 
 
@@ -77,3 +77,26 @@ class Alert:
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), indent=2)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Alert":
+        """Rebuild an Alert from its dict form (history reload).
+
+        Unknown/missing optional fields fall back to defaults so history
+        files written by older versions still load.
+        """
+        return cls(
+            alert_id=d["alert_id"],
+            timestamp=d["timestamp"],
+            can_id=d["can_id"],
+            severity=Severity(d["severity"]),
+            category=d["category"],
+            reason=d.get("reason", ""),
+            status=Status(d.get("status", "NEW")),
+            occurrences=int(d.get("occurrences", 1)),
+            first_seen=d.get("first_seen", ""),
+            last_seen=d.get("last_seen", ""),
+            source_rule=d.get("source_rule", ""),
+            raw_details=d.get("raw_details") or {},
+            status_history=list(d.get("status_history") or []),
+        )

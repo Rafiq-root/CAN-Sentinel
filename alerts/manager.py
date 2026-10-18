@@ -21,12 +21,20 @@ STATUS LIFECYCLE (documented):
   Forward-only (see schema.VALID_TRANSITIONS); every transition is recorded
   in the alert's status_history with a timestamp and optional analyst note.
 
+PERSISTENCE (documented):
+  With history_path set, the manager loads existing history at startup and
+  writes the full history back after EVERY change (new alert, folded
+  duplicate, status transition). The dashboard can therefore restart at any
+  time without losing alerts. Without history_path the manager is purely
+  in-memory (backward compatible). A corrupt or unreadable history file
+  never crashes the manager: it starts fresh and records the problem in
+  self.persistence_errors.
+
 Integration (for Members 1 & 4):
     from alerts.manager import AlertManager
-    mgr = AlertManager()
+    mgr = AlertManager(history_path="alert_history.json")
     alert = mgr.process_event(event_dict)      # Alert (new/folded) or None if invalid
     mgr.acknowledge(alert_id, note="...")      # lifecycle transitions
-    mgr.resolve(alert_id) / mgr.mark_false_positive(alert_id)
     mgr.get_alerts(severity="HIGH", limit=20)  # newest-first query for UI
     mgr.stats()                                # severity/status counts + rejected count
 """
@@ -34,22 +42,28 @@ Integration (for Members 1 & 4):
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 
 from .schema import Alert, Status, VALID_TRANSITIONS, new_alert_id, utc_now_iso
 from .severity_rules import canonical_can_id, classify
+from .storage import load_alerts_json, save_alerts_json
 from .validation import validate_event
 
 
 class AlertManager:
     """Turns detection events into traceable alerts with duplicate folding."""
 
-    def __init__(self, dedupe_window_seconds: int = 10):
+    def __init__(self, dedupe_window_seconds: int = 10, history_path: str | Path | None = None):
         self.dedupe_window_seconds = dedupe_window_seconds
         self.alerts: list[Alert] = []                     # full history, oldest first
         self._active: dict[tuple[str, str], Alert] = {}   # (can_id, RULE) -> newest alert
         self._by_id: dict[str, Alert] = {}                # alert_id -> Alert
         self.rejected_events: list[dict] = []             # boundary rejection log (in-memory)
+        self.persistence_errors: list[str] = []           # history load/save problems (never fatal)
         self.last_error: str = ""                         # reason of the last failed call
+        self._history_path = Path(history_path) if history_path else None
+        if self._history_path is not None:
+            self._load()
 
     # ---------- core ----------
 
@@ -76,6 +90,7 @@ class AlertManager:
         if existing is not None and self._within_window(existing.last_seen, ts):
             existing.occurrences += 1
             existing.last_seen = ts
+            self._persist()
             return existing
 
         alert = Alert(
@@ -93,6 +108,7 @@ class AlertManager:
         self.alerts.append(alert)
         self._active[key] = alert
         self._by_id[alert.alert_id] = alert
+        self._persist()
         return alert
 
     # ---------- status lifecycle ----------
@@ -121,6 +137,7 @@ class AlertManager:
         alert.status_history.append(
             {"status": target.value, "at": utc_now_iso(), "note": note}
         )
+        self._persist()
         return alert
 
     def acknowledge(self, alert_id: str, note: str = "") -> Alert | None:
@@ -162,6 +179,38 @@ class AlertManager:
             by_status[a.status.value] = by_status.get(a.status.value, 0) + 1
         return {"total": len(self.alerts), "by_severity": by_severity,
                 "by_status": by_status, "rejected": len(self.rejected_events)}
+
+    # ---------- persistence ----------
+
+    def save(self) -> None:
+        """Explicitly flush history to disk (no-op without history_path)."""
+        self._persist()
+
+    def _load(self) -> None:
+        """Load history from disk at startup. Corrupt file -> fresh start."""
+        try:
+            data = load_alerts_json(self._history_path)   # [] when file missing
+        except (ValueError, OSError) as exc:
+            self.persistence_errors.append(f"could not load history ({exc}); starting fresh")
+            return
+        for d in data:
+            try:
+                alert = Alert.from_dict(d)
+            except (KeyError, ValueError, TypeError) as exc:
+                self.persistence_errors.append(f"skipped corrupt alert record: {exc}")
+                continue
+            self.alerts.append(alert)
+            self._by_id[alert.alert_id] = alert
+            self._active[(alert.can_id, alert.source_rule)] = alert  # last (newest) wins
+
+    def _persist(self) -> None:
+        """Write full history (oldest first) after every change."""
+        if self._history_path is None:
+            return
+        try:
+            save_alerts_json([a.to_dict() for a in self.alerts], self._history_path)
+        except OSError as exc:
+            self.persistence_errors.append(f"could not save history ({exc})")
 
     # ---------- internals ----------
 
