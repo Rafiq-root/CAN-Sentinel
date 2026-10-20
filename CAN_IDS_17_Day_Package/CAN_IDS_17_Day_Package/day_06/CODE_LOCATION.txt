@@ -1,0 +1,5 @@
+Day 06 milestone: Build the core detection engine
+
+The consolidated, runnable code for this milestone is in ../starter_project/.
+Use the module named in README.md; later milestones depend on earlier modules.
+This avoids maintaining 17 divergent copies of the same engine.
