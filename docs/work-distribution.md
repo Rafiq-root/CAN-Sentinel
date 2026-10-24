@@ -59,3 +59,23 @@
 - `develop` = integration branch (Team Lead merges). `main` = final code, merged only after end review.
 - Mid-review: Oct 27–30 (Weeks 1+2, ≥10 commit days in last 14). Final review: Weeks 3+4 (expected early–mid Nov, 20/20 commit days).
 - Unresponsive >48h → reported to Infotact; remaining members continue without reduction in requirements.
+
+## Integration Contracts (Oct 24)
+
+### M2 -> M3 - detection events (alerts/adapters/from_m2.py)
+- Input: M2 DetectionEngine output rows via to_dict("records")
+- Rule aliases: CAN_ID_RATE_EXCEEDED / GLOBAL_RATE_EXCEEDED -> HIGH_FREQUENCY;
+  UNEXPECTED_CAN_ID -> UNKNOWN_ID; REPEATED_PAYLOAD_PATTERN -> ABNORMAL_ENTROPY;
+  DATASET_ATTACK_LABEL passes through unchanged (ground truth, not a live rule)
+- can_id int -> "0x123" hex string; float epoch seconds -> ISO-8601 Z timestamp
+- M2's severity column is advisory only - M3 severity_rules is the single
+  source of truth (critical CAN IDs 0x000/0x1A4/0x0C8/0x0D2 escalate to HIGH)
+- One event per reason string; malformed rows rejected with a trace, never crash
+
+### M3 -> M4 - dashboard payload (alerts/dashboard_feed.py)
+- dashboard_payload(manager) returns: generated_at, summary (totals,
+  by-severity, by-status, rejected count), critical_active (active alerts on
+  brake/steering/engine/airbag IDs - triage panel), recent (flat rows,
+  newest first, default 25)
+- Read-only and safe to poll; rows are flat strings/ints - the dashboard
+  renders them with zero knowledge of M3 internals
