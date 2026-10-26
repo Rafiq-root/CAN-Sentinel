@@ -1,0 +1,16 @@
+{
+  "name": "DoS Flood - Brake Release Storm",
+  "description": "Attacker floods the bus with spoofed Brake Release commands (CAN 0x000) at ~100 msgs/s. Expected: all 10 events fold into ONE HIGH alert with occurrences=10 (alert-storm suppression).",
+  "events": [
+    {"event_id": "f1",  "timestamp": "2026-10-13T09:00:00.000Z", "can_id": "0x000", "rule": "HIGH_FREQUENCY", "reason": "CAN ID 0x000 observed 96 msgs/s (threshold 50/s)", "details": {"frequency": 96, "threshold": 50}},
+    {"event_id": "f2",  "timestamp": "2026-10-13T09:00:00.100Z", "can_id": "0x000", "rule": "HIGH_FREQUENCY", "reason": "CAN ID 0x000 observed 101 msgs/s (threshold 50/s)", "details": {"frequency": 101, "threshold": 50}},
+    {"event_id": "f3",  "timestamp": "2026-10-13T09:00:00.200Z", "can_id": "0x000", "rule": "HIGH_FREQUENCY", "reason": "CAN ID 0x000 observed 99 msgs/s (threshold 50/s)", "details": {"frequency": 99, "threshold": 50}},
+    {"event_id": "f4",  "timestamp": "2026-10-13T09:00:00.300Z", "can_id": "0x000", "rule": "HIGH_FREQUENCY", "reason": "CAN ID 0x000 observed 104 msgs/s (threshold 50/s)", "details": {"frequency": 104, "threshold": 50}},
+    {"event_id": "f5",  "timestamp": "2026-10-13T09:00:00.400Z", "can_id": "0x000", "rule": "HIGH_FREQUENCY", "reason": "CAN ID 0x000 observed 98 msgs/s (threshold 50/s)", "details": {"frequency": 98, "threshold": 50}},
+    {"event_id": "f6",  "timestamp": "2026-10-13T09:00:00.500Z", "can_id": "0x000", "rule": "HIGH_FREQUENCY", "reason": "CAN ID 0x000 observed 102 msgs/s (threshold 50/s)", "details": {"frequency": 102, "threshold": 50}},
+    {"event_id": "f7",  "timestamp": "2026-10-13T09:00:00.600Z", "can_id": "0x000", "rule": "HIGH_FREQUENCY", "reason": "CAN ID 0x000 observed 97 msgs/s (threshold 50/s)", "details": {"frequency": 97, "threshold": 50}},
+    {"event_id": "f8",  "timestamp": "2026-10-13T09:00:00.700Z", "can_id": "0x000", "rule": "HIGH_FREQUENCY", "reason": "CAN ID 0x000 observed 105 msgs/s (threshold 50/s)", "details": {"frequency": 105, "threshold": 50}},
+    {"event_id": "f9",  "timestamp": "2026-10-13T09:00:00.800Z", "can_id": "0x000", "rule": "HIGH_FREQUENCY", "reason": "CAN ID 0x000 observed 100 msgs/s (threshold 50/s)", "details": {"frequency": 100, "threshold": 50}},
+    {"event_id": "f10", "timestamp": "2026-10-13T09:00:00.900Z", "can_id": "0x000", "rule": "HIGH_FREQUENCY", "reason": "CAN ID 0x000 observed 103 msgs/s (threshold 50/s)", "details": {"frequency": 103, "threshold": 50}}
+  ]
+}

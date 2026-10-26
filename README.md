@@ -12,10 +12,13 @@ Week 1 — Implementation Phase 1 (in progress)
 
 | Module | Owner | Branch |
 |---|---|---|
-| CAN Data Collection & Simulation | Member 1 | `member-1` |
-| Intrusion Detection Engine | Member 2 | `member-2` |
-| Security Analysis & Alert Management | Member 3 | `member-3` |
-| Dashboard & Integration | Member 4 | `member-4` |
+| CAN Simulation & Backend Integration | Member 1 | `member-1` |
+| CAN Data Collection & Intrusion Detection Engine | Member 2 | `member-2` |
+| Security Analysis & Alert Management (Team Lead) | Member 3 | `member-3` |
+| Dashboard & UI | Member 4 | `member-4` |
+
+## Architecture / Data Flow
+Member 1 (simulation) → Member 2 (detection) → Member 3 (alerts) → Member 4 (dashboard)
 
 ## Branching Model
 - `main` — final code only (merged after end review)
