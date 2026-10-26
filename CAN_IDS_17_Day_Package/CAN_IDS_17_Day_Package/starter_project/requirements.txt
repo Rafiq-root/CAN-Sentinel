@@ -1,3 +1,0 @@
-pandas>=2.0
-# Optional, only for the Day 8-9 machine-learning baseline:
-# scikit-learn>=1.3
