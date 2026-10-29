@@ -6,19 +6,20 @@ CAN-Sentinel converts raw detection events from the Intrusion Detection Engine i
 
 Features
 Severity rating: Assigns LOW, MEDIUM, or HIGH severity based on detection rules.
-Safety escalation: Automatically raises alerts involving safety-critical CAN IDs to HIGH.
+Safety escalation: Raises alerts involving safety-critical CAN IDs to HIGH.
 Duplicate folding: Groups repeated events within a configurable time window.
 Input validation: Rejects malformed events without crashing the pipeline.
 Persistent history: Stores alerts in JSON and exports CSV reports.
 Dashboard integration: Supports alert filtering and statistics.
 Pipeline
 text
-Member 2                 Member 3                 Member 4
-Detection Engine  ────►  CAN-Sentinel  ────────►  Dashboard
-                         Validate
-                         Rate severity
-                         Fold duplicates
-                         Store history
+Member 2                  Member 3                    Member 4
+Detection Engine  ──────► CAN-Sentinel ────────────► Dashboard
+                           │
+                           ├── Validate events
+                           ├── Rate severity
+                           ├── Fold duplicates
+                           └── Store alert history
 
 Requirements
 Python 3.10+
@@ -26,19 +27,27 @@ Python standard library
 pytest for testing
 Quick Start
 
-Run from the repository root:
+Run these commands from the repository root.
+
+1. Run all tests
 
 bash
-# Run all tests
 python3 -m pytest alerts -v
 
-# Generate sample alert logs (JSON + CSV)
+
+2. Generate sample alert logs (JSON + CSV)
+
+bash
 python3 -m alerts.generate_samples
 
-# Run attack scenarios
+
+3. Run attack scenarios
+
+bash
 python3 -m alerts.generate_scenarios
 
 Usage
+Process a Detection Event
 python
 from alerts.manager import AlertManager
 
@@ -53,14 +62,19 @@ alert = mgr.process_event({
     "details": {"frequency": 142},
 })
 
-# Query alerts
-alerts = mgr.get_alerts(severity="HIGH", limit=20)
-
-# Get statistics
-stats = mgr.stats()
-
 
 Invalid events return None and are recorded in mgr.rejected_events.
+
+Query Alerts and Statistics
+python
+# Get HIGH-severity alerts
+alerts = mgr.get_alerts(severity="HIGH", limit=20)
+
+# Get alerts for a specific CAN ID and status
+new_alerts = mgr.get_alerts(can_id="0x1A4", status="NEW")
+
+# Get aggregate statistics
+stats = mgr.stats()
 
 Severity Model
 Detection Rule	Base Severity
@@ -71,67 +85,82 @@ ABNORMAL_TIMING	MEDIUM
 ABNORMAL_ENTROPY	MEDIUM
 MALFORMED_FRAME	LOW
 Unknown rule	MEDIUM
+Safety-Critical CAN IDs
+CAN ID	System
+0x000	Brake control
+0x1A4	Steering angle
+0x0C8	Engine RPM
+0x0D2	Airbag status
 
-Safety-critical CAN IDs: 0x000 (brake), 0x1A4 (steering), 0x0C8 (engine RPM), 0x0D2 (airbag).
-
-Any event involving these IDs is escalated to HIGH, regardless of its base severity.
+Escalation rule: Any event involving a safety-critical CAN ID is assigned HIGH severity, regardless of its base severity.
 
 Validation and Duplicate Folding
 Input Validation
 
-Events are rejected if they contain:
+Events are rejected if:
 
-Missing or invalid CAN IDs outside 0x000–0x7FF.
-Missing or empty detection rules.
-Invalid timestamps, when supplied.
-Incorrect types for reason or details.
-A non-dictionary event.
+The event is not a dictionary.
+The CAN ID is missing, invalid, or outside 0x000–0x7FF.
+The detection rule is missing, not a string, or empty.
+A supplied timestamp is invalid.
+reason is not a string.
+details is not a dictionary.
 
 Rejected events are logged, and processing continues without raising an exception through the event-processing interface.
 
 Duplicate Folding
-Same CAN ID + rule within 10 seconds: Update the existing alert.
-Same key outside the window: Create a new alert.
-Different CAN ID or rule: Create a separate alert.
-Unparseable timestamps: Prefer folding to reduce alert spam.
+Condition	Behavior
+Same CAN ID and rule within 10 seconds	Update existing alert
+Same key outside the window	Create a new alert
+Different CAN ID or rule	Create a separate alert
+Unparseable timestamps	Prefer folding to reduce alert spam
 
 Folded events increment occurrences and update last_seen when possible.
 
 Persistence
+Enable Automatic Persistence
 python
 from alerts.manager import AlertManager
-from alerts.storage import (
-    save_alerts_json,
-    load_alerts_json,
-    export_alerts_csv,
-)
 
-# Automatic persistence
 mgr = AlertManager(history_path="alert_history.json")
 
-# Manual export
-save_alerts_json(mgr.get_alerts(), "history.json")
-export_alerts_csv(mgr.get_alerts(), "history.csv")
 
-# Load saved history
+Existing history is loaded at startup, and changes are saved automatically when persistent mode is enabled.
+
+Save and Load JSON History
+python
+from alerts.storage import save_alerts_json, load_alerts_json
+
+# Save alert history
+save_alerts_json(mgr.get_alerts(), "history.json")
+
+# Load alert history
 alerts = load_alerts_json("history.json")
 
+Export CSV
+python
+from alerts.storage import export_alerts_csv
 
-JSON preserves full alert details, including raw_details. CSV provides a flattened format for review. Missing history files return an empty list.
+export_alerts_csv(mgr.get_alerts(), "history.csv")
 
-In persistent mode, history is loaded at startup and updates are saved automatically. Corrupt history should not crash initialization; the manager records persistence errors and starts fresh.
-
+JSON: Preserves full alert details, including raw_details.
+CSV: Provides a flattened format for review.
+Missing history: Returns an empty list when loading a nonexistent file.
+Corrupt history: Persistent mode should start fresh and record the problem in mgr.persistence_errors, rather than crash.
 Attack Scenarios
 
-Run the scenarios using python3 -m alerts.generate_scenarios.
+Run all scenarios:
+
+bash
+python3 -m alerts.generate_scenarios
 
 Scenario	Expected Result
-DoS flood: 10 events on 0x000 in 0.9 s	One HIGH alert, 10 occurrences
-Spoofing: UNKNOWN_ID on 0x0D2 and 0x123	HIGH for 0x0D2, MEDIUM for 0x123
-Replay: two bursts on 0x7FF, more than 10 s apart	Two alerts, two occurrences each
+DoS flood: 10 events on 0x000 in 0.9 seconds	One HIGH alert with 10 occurrences
+Spoofing: UNKNOWN_ID on 0x0D2 and 0x123	HIGH for 0x0D2; MEDIUM for 0x123
+Replay: Two bursts on 0x7FF, more than 10 seconds apart	Two alerts, each with two occurrences
 Testing
 
-Run the test suite:
+Run the complete test suite:
 
 bash
 python3 -m pytest alerts -v
@@ -162,8 +191,8 @@ alerts/
     └── test_validation.py
 
 Roadmap
-Week 2: Status lifecycle, persisted transitions, additional dashboard queries.
+Week 2: Status lifecycle, persisted transitions, and additional dashboard queries.
 Week 3: Live simulator and detection engine integration.
-Week 4: Performance improvements, edge-case testing, final documentation.
+Week 4: Performance improvements, edge-case testing, and final documentation.
 
 Pipeline: Member 2 → CAN-Sentinel (Member 3) → Member 4
