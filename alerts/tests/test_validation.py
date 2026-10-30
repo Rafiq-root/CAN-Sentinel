@@ -42,12 +42,23 @@ def test_int_can_id_rejected():
     assert not ok
 
 
-def test_can_id_out_of_11bit_range_rejected():
-    ok, _ = validate_event({**VALID, "can_id": "0x800"})    # one above max 0x7FF
+def test_can_id_out_of_29bit_range_rejected():
+    ok, _ = validate_event({**VALID, "can_id": "0x20000000"})  # one above 0x1FFFFFFF
     assert not ok
 
 
-def test_can_id_boundary_7ff_accepted():
+def test_can_id_boundary_1fffffff_accepted():
+    ok, _ = validate_event({**VALID, "can_id": "0x1FFFFFFF"})
+    assert ok
+
+
+def test_gem_29bit_extended_id_accepted():
+    # real GEM dataset arbitration IDs (PACMod control) must pass validation
+    ok, err = validate_event({**VALID, "can_id": "0x18FF00F9"})
+    assert ok, err
+
+
+def test_11bit_standard_still_accepted():
     ok, _ = validate_event({**VALID, "can_id": "0x7FF"})
     assert ok
 

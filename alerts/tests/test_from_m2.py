@@ -128,11 +128,14 @@ def test_critical_can_id_escalates_beyond_m2_severity():
     assert _sev(m.get_alerts()[0]) == "HIGH"
 
 
-def test_extended_29bit_id_reaches_manager_rejection():
+def test_extended_29bit_id_now_accepted():
+    # contract widened Oct 30 for the GEM dataset: 29-bit IDs are valid;
+    # only values above 0x1FFFFFFF are rejected now
     m = AlertManager()
     fed, row_rej, mgr_rej = ingest_rows(m, [_row(can_id=0x1FFFFFFF)])
-    assert (fed, row_rej, mgr_rej) == (1, 0, 1)
-    assert len(m.rejected_events) == 1
+    assert (fed, row_rej, mgr_rej) == (1, 0, 0)
+    assert len(m.rejected_events) == 0
+    assert m.get_alerts()[0]["can_id"] == "0x1FFFFFFF"
 
 
 def test_ingest_end_to_end_dedupe_folds_repeats():

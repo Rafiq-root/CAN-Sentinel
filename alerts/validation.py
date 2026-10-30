@@ -6,8 +6,10 @@ Rule: nothing crosses into the AlertManager without passing validate_event().
 
 DOCUMENTED VALIDATION RULES:
   1. event    - must be a dict
-  2. can_id   - required; hex STRING (e.g. '0x1A4'); standard 11-bit range
-                0x000-0x7FF (set CAN_ID_MAX to 0x1FFFFFFF for 29-bit extended)
+  2. can_id   - required; hex STRING (e.g. '0x1A4', 29-bit '0x18FF00F9');
+                accepts 11-bit standard (0x000-0x7FF) and 29-bit extended
+                up to 0x1FFFFFFF (CAN_ID_MAX) - widened Oct 30 for the GEM
+                real-vehicle dataset
   3. rule     - required; non-empty string. Unknown rule NAMES are accepted -
                 they default to MEDIUM severity (see severity_rules.py) - only
                 a missing/empty rule is invalid.
@@ -23,7 +25,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-CAN_ID_MAX = 0x7FF  # 11-bit standard CAN identifier
+CAN_ID_MAX = 0x1FFFFFFF  # 29-bit extended CAN identifier - superset of the
+# 11-bit standard range (0x000-0x7FF). Widened Oct 30: the GEM real-vehicle
+# dataset uses 29-bit arbitration IDs (e.g. 18FF00F9).
 
 
 def validate_event(event) -> tuple[bool, str]:
@@ -42,7 +46,7 @@ def validate_event(event) -> tuple[bool, str]:
     except ValueError:
         return False, f"can_id '{raw_id}' is not valid hex"
     if not (0 <= value <= CAN_ID_MAX):
-        return False, f"can_id 0x{value:X} outside 11-bit range (0x000-0x{CAN_ID_MAX:03X})"
+        return False, f"can_id 0x{value:X} outside 29-bit range (0x000-0x{CAN_ID_MAX:X})"
 
     # --- rule ---
     rule = event.get("rule")
