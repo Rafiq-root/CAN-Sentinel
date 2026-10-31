@@ -15,14 +15,41 @@ escalated to HIGH, regardless of its base rule severity.
 
 from .schema import Severity
 
-# Safety-critical CAN IDs for our mock vehicle. Extend together with
-# Member 1 once the shared CAN ID map is finalised.
-CRITICAL_CAN_IDS = {
-    "0x000",   # brake control (mock)
-    "0x1A4",   # steering angle (mock)
-    "0x0C8",   # engine RPM (mock)
-    "0x0D2",   # airbag status (mock)
+# Safety-critical CAN IDs, per vehicle profile. The ACTIVE profile decides
+# which IDs escalate to HIGH; swap with set_vehicle_critical_map().
+#   mock_vehicle - our simulation profile (Weeks 1-2 behaviour, unchanged)
+#   gem_e6       - the real GEM e6 platform: the labeled dataset's tampering
+#                  targets ARE the safety-critical IDs (PACMod brake/steering)
+VEHICLE_CRITICAL_MAPS = {
+    "mock_vehicle": {
+        "0x000",       # brake control (simulation profile)
+        "0x1A4",       # steering angle (simulation profile)
+        "0x0C8",       # engine RPM (simulation profile)
+        "0x0D2",       # airbag status (simulation profile)
+    },
+    "gem_e6": {
+        "0x18FF00F9",  # PACMod brake control (GEM e6 real-vehicle dataset)
+        "0x18FF70F9",  # PACMod steering control (GEM e6 real-vehicle dataset)
+    },
 }
+
+# The ACTIVE critical set - kept as the SAME object everyone imports:
+# set_vehicle_critical_map() mutates it in place, so every existing import
+# (classify, dashboard_feed, tests) sees the swap immediately.
+CRITICAL_CAN_IDS = set(VEHICLE_CRITICAL_MAPS["mock_vehicle"])
+
+
+def set_vehicle_critical_map(name: str) -> None:
+    """Activate a vehicle profile's critical-ID set (in place).
+
+    Unknown profile -> ValueError: a misconfigured vehicle name is a
+    programmer error, not pipeline input - the one place we fail LOUD.
+    """
+    if name not in VEHICLE_CRITICAL_MAPS:
+        raise ValueError("unknown vehicle profile %r - available: %s"
+                         % (name, ", ".join(sorted(VEHICLE_CRITICAL_MAPS))))
+    CRITICAL_CAN_IDS.clear()
+    CRITICAL_CAN_IDS.update(VEHICLE_CRITICAL_MAPS[name])
 
 # Detection rule name (from Member 2) -> base severity.
 # Keep these rule names in sync with the detection engine.

@@ -44,6 +44,7 @@ import sys
 from .adapters.from_m2 import ingest_rows
 from .manager import AlertManager
 from .report import build_report
+from .severity_rules import set_vehicle_critical_map
 
 ATTACK_RULES = {
     "DoS": "CAN_ID_RATE_EXCEEDED",
@@ -112,7 +113,14 @@ def main(argv=None):
     parser.add_argument("--base", type=float, default=None,
                         help="epoch seconds anchoring the capture-relative "
                              "clock (1793318400 = 2026-10-30T00:00:00Z)")
+    parser.add_argument("--vehicle", default="mock_vehicle",
+                        help="critical-ID profile to activate for this run "
+                             "(mock_vehicle | gem_e6); see severity_rules.py")
     args = parser.parse_args(argv)
+
+    # every CLI run declares its vehicle profile - deterministic regardless
+    # of what an earlier run left active. Unknown name -> ValueError (loud).
+    set_vehicle_critical_map(args.vehicle)
 
     source = sys.stdin if args.csv == "-" else open(args.csv, newline="")
     try:

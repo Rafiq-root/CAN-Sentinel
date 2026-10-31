@@ -79,3 +79,10 @@
   newest first, default 25)
 - Read-only and safe to poll; rows are flat strings/ints - the dashboard
   renders them with zero knowledge of M3 internals
+
+### Per-vehicle severity profiles (Oct 31)
+- `set_vehicle_critical_map("mock_vehicle" | "gem_e6")` in alerts/severity_rules.py
+- gem_e6 = real PACMod brake 0x18FF00F9 + steering 0x18FF70F9 (from the
+  labeled GEM dataset's tampering targets)
+- dashboard_feed resolves the active set per payload build - no stale panels
+- replay CLI: `python3 -m alerts.replay_gem <csv> --vehicle gem_e6`

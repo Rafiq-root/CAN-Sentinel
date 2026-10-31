@@ -55,13 +55,15 @@ def _as_int(value):
         return None
 
 
-_CRITICAL_INTS = {v for v in (_as_int(c) for c in CRITICAL_CAN_IDS)
-                  if v is not None}
-
-
 def _is_critical(can_id):
+    # Resolved at CALL time, not import time: the active vehicle profile can
+    # be swapped (set_vehicle_critical_map) - a payload built after a swap
+    # must reflect it, never a stale set captured at import. 4-6 entries.
     value = _as_int(can_id)
-    return value is not None and value in _CRITICAL_INTS
+    if value is None:
+        return False
+    return value in {v for v in (_as_int(c) for c in CRITICAL_CAN_IDS)
+                     if v is not None}
 
 
 def dashboard_payload(manager, recent_limit=25):
