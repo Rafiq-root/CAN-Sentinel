@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import sys
 
 from .adapters.from_m2 import ingest_rows
@@ -130,11 +131,17 @@ def main(argv=None):
         if source is not sys.stdin:
             source.close()
 
-    print("replayed: events=%d row-rejected=%d manager-rejected=%d alerts=%d"
-          % (fed, row_rej, mgr_rej, len(manager.get_alerts())))
-    print()
-    print(build_report(manager,
-                       title="GEM Dataset Replay - Alert Session Report"))
+    try:
+        print("replayed: events=%d row-rejected=%d manager-rejected=%d alerts=%d"
+              % (fed, row_rej, mgr_rej, len(manager.get_alerts())))
+        print()
+        print(build_report(manager,
+                           title="GEM Dataset Replay - Alert Session Report"))
+    except BrokenPipeError:
+        # Downstream closed the pipe (e.g. `... | head`) - not an error.
+        # Point stdout at devnull so the exit-time flush does not raise a
+        # second, noisier BrokenPipeError after we handle this one.
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
     return 0
 
 

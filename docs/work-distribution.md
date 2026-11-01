@@ -86,3 +86,11 @@
   labeled GEM dataset's tampering targets)
 - dashboard_feed resolves the active set per payload build - no stale panels
 - replay CLI: `python3 -m alerts.replay_gem <csv> --vehicle gem_e6`
+
+### M3->M4 contract v2: aggregated triage panel (Nov 1)
+- critical_active rows are now PER SYSTEM (one row per attacked can_id):
+  alert_count, total_occurrences, highest_severity, top_rule, first/last seen
+- recent stays per-event: panel answers "what to work on", recent answers
+  "what happened". Found by replaying real GEM data - 1,291 tampering
+  alerts made a per-alert panel unreadable.
+- M4 (Ashwa): wire the dashboard to this shape before locking the UI.

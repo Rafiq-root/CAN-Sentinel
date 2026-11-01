@@ -53,9 +53,10 @@ def build_report(manager, title="CAN-Sentinel Alert Session Report",
 
     if payload["critical_active"]:
         for row in payload["critical_active"]:
-            lines.append("- %s  rule=%s  severity=%s  status=%s  occurrences=%d"
-                         % (row["can_id"], row["rule"], row["severity"],
-                            row["status"], row["occurrences"]))
+            lines.append("- %s  %d alert(s), %d occurrences  severity=%s  rule=%s  last seen %s"
+                         % (row["can_id"], row["alert_count"],
+                            row["total_occurrences"], row["highest_severity"],
+                            row["top_rule"], row["last_seen"]))
     else:
         lines.append("- none")
 

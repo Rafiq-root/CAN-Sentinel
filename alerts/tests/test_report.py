@@ -42,7 +42,7 @@ def test_report_triage_lists_active_critical():
     r = build_report(m)
     triage = r.split("Critical IDs")[1].split("##")[0]
     assert "0x000" in triage
-    assert "occurrences=1" in triage
+    assert "1 alert(s), 1 occurrences" in triage
 
 
 def test_report_resolved_critical_leaves_triage():

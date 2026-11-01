@@ -103,3 +103,75 @@ def test_full_chain_m2_engine_to_dashboard_payload():
     assert p["summary"]["by_severity"]["HIGH"] == 1
     assert p["recent"][0]["occurrences"] == 3
     assert p["recent"][0]["rule"] == "HIGH_FREQUENCY"
+
+
+# --- aggregated triage panel (Nov 1) ---
+
+def test_panel_aggregates_by_can_id():
+    m = AlertManager()
+    for i in range(3):   # three bursts past the window: three alert objects
+        m.process_event(_ev("0x000", "HIGH_FREQUENCY", "2026-10-31T10:0%d:00Z" % i))
+    panel = dashboard_payload(m)["critical_active"]
+    assert len(panel) == 1                     # ONE row per attacked system
+    row = panel[0]
+    assert row["can_id"] == "0x000"
+    assert row["alert_count"] == 3
+    assert row["total_occurrences"] == 3
+
+
+def test_panel_sums_folded_occurrences():
+    m = AlertManager()
+    for i in range(10):   # one folded alert, occurrences=10
+        m.process_event(_ev("0x000", "HIGH_FREQUENCY", "2026-10-31T10:00:%02dZ" % i))
+    row = dashboard_payload(m)["critical_active"][0]
+    assert row["alert_count"] == 1
+    assert row["total_occurrences"] == 10
+
+
+def test_panel_row_shape_flat():
+    m = AlertManager()
+    m.process_event(_ev("0x000", "HIGH_FREQUENCY", "2026-10-31T10:00:00Z"))
+    row = dashboard_payload(m)["critical_active"][0]
+    for key in ("can_id", "alert_count", "total_occurrences", "highest_severity",
+                "top_rule", "first_seen", "last_seen"):
+        assert key in row, key
+    assert isinstance(row["alert_count"], int)
+
+
+def test_panel_span_earliest_first_latest_last():
+    m = AlertManager()
+    m.process_event(_ev("0x000", "HIGH_FREQUENCY", "2026-10-31T10:00:00Z"))  # burst A
+    m.process_event(_ev("0x000", "HIGH_FREQUENCY", "2026-10-31T10:05:00Z"))  # burst B
+    row = dashboard_payload(m)["critical_active"][0]
+    assert row["alert_count"] == 2
+    assert row["first_seen"] == "2026-10-31T10:00:00Z"
+    assert row["last_seen"] == "2026-10-31T10:05:00Z"
+
+
+def test_panel_top_rule_most_frequent():
+    m = AlertManager()
+    m.process_event(_ev("0x000", "HIGH_FREQUENCY", "2026-10-31T10:00:00Z"))
+    m.process_event(_ev("0x000", "HIGH_FREQUENCY", "2026-10-31T10:05:00Z"))
+    m.process_event(_ev("0x000", "UNKNOWN_ID", "2026-10-31T10:10:00Z"))
+    row = dashboard_payload(m)["critical_active"][0]
+    assert row["alert_count"] == 3
+    assert row["top_rule"] == "HIGH_FREQUENCY"   # 2 of 3 alert objects
+
+
+def test_panel_orders_high_then_total_occurrences():
+    m = AlertManager()
+    for i in range(10):    # DoS: folded, 10 occurrences
+        m.process_event(_ev("0x000", "HIGH_FREQUENCY", "2026-10-31T10:00:%02dZ" % i))
+    m.process_event(_ev("0x0D2", "UNKNOWN_ID", "2026-10-31T10:01:00Z"))  # airbag: 1
+    panel = dashboard_payload(m)["critical_active"]
+    assert [r["can_id"] for r in panel] == ["0x000", "0x0D2"]   # bigger attack first
+
+
+def test_panel_drops_resolved_system_keeps_other():
+    m = AlertManager()
+    for i in range(10):
+        m.process_event(_ev("0x000", "HIGH_FREQUENCY", "2026-10-31T10:00:%02dZ" % i))
+    m.process_event(_ev("0x0D2", "UNKNOWN_ID", "2026-10-31T10:01:00Z"))
+    m.resolve(m.get_alerts()[0]["alert_id"])   # resolve the airbag alert
+    panel = dashboard_payload(m)["critical_active"]
+    assert [r["can_id"] for r in panel] == ["0x000"]   # only the live system stays

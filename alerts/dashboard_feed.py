@@ -5,8 +5,11 @@ Member-4 dashboard needs to render the alert console:
 
     generated_at     ISO-8601 UTC "now" (refresh indicator)
     summary          totals: by severity, by status, rejected events
-    critical_active  ACTIVE alerts on CRITICAL_CAN_IDS (brake/steering/
-                     engine/airbag) - the triage panel, HIGH first
+    critical_active  triage panel: active alerts on the ACTIVE vehicle's
+                     CRITICAL_CAN_IDS, aggregated PER SYSTEM (one row per
+                     attacked can_id): alert_count, total_occurrences,
+                     highest_severity, top_rule, first/last seen. Ordered
+                     HIGH first, then total occurrences.
     recent           newest-first flat alert rows (table body)
 
 Rows are FLAT dicts (strings/ints only) so the dashboard renders them
@@ -66,6 +69,57 @@ def _is_critical(can_id):
                      if v is not None}
 
 
+def _aggregate_critical(active):
+    """Collapse active critical alerts into one row per attacked system.
+
+    The panel answers 'what do I need to work on' (one row per attacked
+    CAN ID); the recent list answers 'what happened' (one row per alert).
+    Aggregation added Nov 1: replaying the real GEM dataset produced 1,291
+    tampering alerts, which made a per-alert panel unreadable.
+    """
+    groups = {}
+    for a in active:
+        if not _is_critical(a.get("can_id", "")):
+            continue
+        can_id = a.get("can_id", "")
+        g = groups.get(can_id)
+        if g is None:
+            groups[can_id] = {
+                "can_id": can_id,
+                "alert_count": 0,
+                "total_occurrences": 0,
+                "highest_severity": "LOW",
+                "top_rule": "",
+                "first_seen": a.get("first_seen", ""),
+                "last_seen": a.get("last_seen", ""),
+                "_rules": {},
+                "_sev_rank": 99,
+            }
+            g = groups[can_id]
+        g["alert_count"] += 1
+        g["total_occurrences"] += a.get("occurrences", 1) or 1
+        sev = _name(a.get("severity", ""))
+        if _SEVERITY_RANK.get(sev, 99) < g["_sev_rank"]:
+            g["highest_severity"] = sev
+            g["_sev_rank"] = _SEVERITY_RANK.get(sev, 99)
+        rule = a.get("source_rule", a.get("rule", "")) or ""
+        g["_rules"][rule] = g["_rules"].get(rule, 0) + 1
+        first, last = a.get("first_seen", ""), a.get("last_seen", "")
+        if first and (not g["first_seen"] or first < g["first_seen"]):
+            g["first_seen"] = first
+        if last and (not g["last_seen"] or last > g["last_seen"]):
+            g["last_seen"] = last
+    rows = []
+    for g in groups.values():
+        g["top_rule"] = max(g["_rules"], key=g["_rules"].get) if g["_rules"] else ""
+        del g["_rules"]
+        del g["_sev_rank"]
+        rows.append(g)
+    rows.sort(key=lambda g: g["total_occurrences"], reverse=True)
+    rows.sort(key=lambda g: _SEVERITY_RANK.get(g["highest_severity"], 99))
+    return rows
+
+
 def dashboard_payload(manager, recent_limit=25):
     """Build the render-ready dashboard dict from an AlertManager."""
     alerts = manager.get_alerts()
@@ -80,9 +134,7 @@ def dashboard_payload(manager, recent_limit=25):
         if stat in _ACTIVE:
             active.append(a)
 
-    critical = [a for a in active if _is_critical(a.get("can_id", ""))]
-    critical.sort(key=lambda a: a.get("timestamp", ""), reverse=True)
-    critical.sort(key=lambda a: _SEVERITY_RANK.get(_name(a.get("severity", "")), 99))
+    critical_rows = _aggregate_critical(active)
 
     return {
         "generated_at": utc_now_iso(),
@@ -93,6 +145,6 @@ def dashboard_payload(manager, recent_limit=25):
             "by_status": by_status,
             "rejected_events": len(manager.rejected_events),
         },
-        "critical_active": [_flat(a) for a in critical],
+        "critical_active": critical_rows,
         "recent": [_flat(a) for a in alerts[:recent_limit]],
     }
