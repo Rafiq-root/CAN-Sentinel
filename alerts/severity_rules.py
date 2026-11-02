@@ -30,6 +30,11 @@ VEHICLE_CRITICAL_MAPS = {
     "gem_e6": {
         "0x18FF00F9",  # PACMod brake control (GEM e6 real-vehicle dataset)
         "0x18FF70F9",  # PACMod steering control (GEM e6 real-vehicle dataset)
+        "0x000",       # starvation-DoS vector - added Nov 2: replaying the GEM
+                       # attack file left the session's biggest threat (41,080
+                       # messages, 94.5% of traffic) out of the triage panel.
+                       # ID 0 wins arbitration on ANY CAN bus, so an alert on
+                       # it is a bus-safety event on every vehicle profile.
     },
 }
 

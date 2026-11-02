@@ -78,3 +78,39 @@ def test_cli_vehicle_flag_end_to_end(tmp_path, capsys):
     assert "alerts=1" in out
     triage = out.split("Critical IDs")[1].split("##")[0]
     assert "0x18FF00F9" in triage          # the finding, closed
+
+
+# --- starvation-DoS vector in the gem_e6 profile (Nov 2) ---
+
+def test_dos_vector_in_gem_panel():
+    set_vehicle_critical_map("gem_e6")
+    m = AlertManager()
+    m.process_event(_ev("0x000", rule="HIGH_FREQUENCY"))
+    panel = dashboard_payload(m)["critical_active"]
+    assert [r["can_id"] for r in panel] == ["0x000"]
+    assert panel[0]["total_occurrences"] == 1
+
+
+def test_dos_vector_escalates_under_gem_profile():
+    set_vehicle_critical_map("gem_e6")
+    m = AlertManager()
+    m.process_event(_ev("0x000", rule="UNKNOWN_ID"))   # MEDIUM base rule
+    assert m.get_alerts()[0]["severity"] == "HIGH"     # bus-safety escalation
+
+
+def test_gem_panel_lists_all_three_systems():
+    # real-data hierarchy (as in the GEM set): DoS biggest, brake middle,
+    # steering smallest - gives the severity/occurrences ordering rule real
+    # values to sort instead of a three-way tie it is not defined to break.
+    set_vehicle_critical_map("gem_e6")
+    m = AlertManager()
+    for i in range(3):    # folds -> one alert, occurrences=3
+        m.process_event(_ev("0x000", rule="HIGH_FREQUENCY",
+                            ts="2026-11-02T10:00:%02dZ" % i))
+    for i in range(2):    # folds -> occurrences=2
+        m.process_event(_ev("0x18FF00F9", rule="SPOOFED_ID",
+                            ts="2026-11-02T10:05:%02dZ" % i))
+    m.process_event(_ev("0x18FF70F9", rule="SPOOFED_ID"))   # occurrences=1
+    panel = dashboard_payload(m)["critical_active"]
+    assert [r["can_id"] for r in panel] == ["0x000", "0x18FF00F9", "0x18FF70F9"]
+    assert [r["total_occurrences"] for r in panel] == [3, 2, 1]
