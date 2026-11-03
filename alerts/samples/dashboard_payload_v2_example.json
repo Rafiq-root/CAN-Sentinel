@@ -1,0 +1,80 @@
+{
+  "generated_at": "2026-11-03T06:57:41.368Z",
+  "summary": {
+    "total_alerts": 4,
+    "active_alerts": 3,
+    "by_severity": {
+      "HIGH": 2,
+      "MEDIUM": 1,
+      "LOW": 1
+    },
+    "by_status": {
+      "NEW": 3,
+      "ACKNOWLEDGED": 0,
+      "RESOLVED": 1,
+      "FALSE_POSITIVE": 0
+    },
+    "rejected_events": 1
+  },
+  "critical_active": [
+    {
+      "can_id": "0x000",
+      "alert_count": 1,
+      "total_occurrences": 10,
+      "highest_severity": "HIGH",
+      "top_rule": "HIGH_FREQUENCY",
+      "first_seen": "2026-11-03T09:30:00Z",
+      "last_seen": "2026-11-03T09:30:09Z"
+    }
+  ],
+  "recent": [
+    {
+      "alert_id": "ALR-20261103-B61F95",
+      "timestamp": "2026-11-03T09:33:00Z",
+      "can_id": "0x301",
+      "rule": "MALFORMED_FRAME",
+      "severity": "LOW",
+      "status": "NEW",
+      "occurrences": 1,
+      "first_seen": "2026-11-03T09:33:00Z",
+      "last_seen": "2026-11-03T09:33:00Z",
+      "reason": ""
+    },
+    {
+      "alert_id": "ALR-20261103-23AE47",
+      "timestamp": "2026-11-03T09:32:00Z",
+      "can_id": "0x201",
+      "rule": "UNKNOWN_ID",
+      "severity": "MEDIUM",
+      "status": "RESOLVED",
+      "occurrences": 1,
+      "first_seen": "2026-11-03T09:32:00Z",
+      "last_seen": "2026-11-03T09:32:00Z",
+      "reason": ""
+    },
+    {
+      "alert_id": "ALR-20261103-E6E339",
+      "timestamp": "2026-11-03T09:31:00Z",
+      "can_id": "0x123",
+      "rule": "SPOOFED_ID",
+      "severity": "HIGH",
+      "status": "NEW",
+      "occurrences": 1,
+      "first_seen": "2026-11-03T09:31:00Z",
+      "last_seen": "2026-11-03T09:31:00Z",
+      "reason": ""
+    },
+    {
+      "alert_id": "ALR-20261103-911BFF",
+      "timestamp": "2026-11-03T09:30:00Z",
+      "can_id": "0x000",
+      "rule": "HIGH_FREQUENCY",
+      "severity": "HIGH",
+      "status": "NEW",
+      "occurrences": 10,
+      "first_seen": "2026-11-03T09:30:00Z",
+      "last_seen": "2026-11-03T09:30:09Z",
+      "reason": ""
+    }
+  ]
+}
