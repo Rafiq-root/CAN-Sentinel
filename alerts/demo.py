@@ -1,4 +1,4 @@
-"""One-command demo of the M3 alert pipeline (mid-review live run).
+"""One-command demo of the M3 alert pipeline (final review live run).
 
     python3 -m alerts.demo
 
